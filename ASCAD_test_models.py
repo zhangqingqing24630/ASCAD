@@ -111,21 +111,32 @@ def rank(predictions, metadata, real_key, min_trace_idx, max_trace_idx, last_key
 		key = metadata[min_trace_idx + p]['key'][target_byte]
 		for i in range(0, 256):
 			# Our candidate key byte probability is the sum of the predictions logs
+# 			if (simulated_key!=1):
+# 				proba = predictions[p][AES_Sbox[plaintext ^ i]]
+# 			else:
+# 				proba = predictions[p][AES_Sbox[plaintext ^ key ^ i]]
+# 			if proba != 0:
+# 				key_bytes_proba[i] += np.log(proba)
+# 			else:
+# 				# We do not want an -inf here, put a very small epsilon
+# 				# that correspondis to a power of our min non zero proba
+# 				min_proba_predictions = predictions[p][np.array(predictions[p]) != 0]
+# 				if len(min_proba_predictions) == 0:
+# 					print("Error: got a prediction with only zeroes ... this should not happen!")
+# 					sys.exit(-1)
+# 				min_proba = min(min_proba_predictions)
+# 				key_bytes_proba[i] += np.log(min_proba**2)
+# 当分类器为弱分类器时，原来的代码虽然避免了-inf的问题，但是弱分类器的预测值存在大量的负数，会出现猜测熵始终为0的情况。
+			a=predictions[p]
+			b=a-np.min(a)
+			a=b/np.sum(b)
+			# Our candidate key byte probability is the sum of the predictions logs
 			if (simulated_key!=1):
-				proba = predictions[p][AES_Sbox[plaintext ^ i]]
+				proba = a[AES_Sbox[plaintext ^ i]]
 			else:
-				proba = predictions[p][AES_Sbox[plaintext ^ key ^ i]]
-			if proba != 0:
-				key_bytes_proba[i] += np.log(proba)
-			else:
-				# We do not want an -inf here, put a very small epsilon
-				# that correspondis to a power of our min non zero proba
-				min_proba_predictions = predictions[p][np.array(predictions[p]) != 0]
-				if len(min_proba_predictions) == 0:
-					print("Error: got a prediction with only zeroes ... this should not happen!")
-					sys.exit(-1)
-				min_proba = min(min_proba_predictions)
-				key_bytes_proba[i] += np.log(min_proba**2)
+				proba = a[AES_Sbox[plaintext ^ key ^ i]]
+			proba = a[AES_Sbox[plaintext ^ i]]
+			key_bytes_proba[i] += np.log(proba)
 	# Now we find where our real key candidate lies in the estimation.
 	# We do this by sorting our estimates and find the rank in the sorted array.
 	sorted_proba = np.array(list(map(lambda a : key_bytes_proba[a], key_bytes_proba.argsort()[::-1])))
